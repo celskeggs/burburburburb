@@ -6,42 +6,14 @@
 #include <lualib.h>
 
 static int sysbusctl(lua_State *L) {
-	puts("Hello, World!");
+	const char *control = luaL_checkstring(L, 1);
+	if (strcmp(control, "device-query") == 0) {
+		puts("Query command.");
+	} else {
+		luaL_error(L, "bad sysbusctl command: %s", control);
+	}
 	return 0;
 }
-
-/*int load_bios_string(lua_State *L, char *fname) {
-	FILE *target = fopen(fname, "r");
-	if (target == NULL) {
-		perror(fname);
-		return 1;
-	}
-	fseek(target, 0, SEEK_END);
-	long size = ftell(target);
-	fseek(target, 0, SEEK_SET);
-	char *buffer = (char *) malloc(size + 1);
-	if (buffer == NULL) {
-		fprintf(stderr, "Could not allocate buffer to hold %d for %s.\n", size + 1, fname);
-		free(buffer);
-		fclose(target); // ignore additional errors
-		return 1;
-	}
-	if (size != fread(buffer, sizeof(char), size, target)) {
-		perror(fname);
-		free(buffer);
-		fclose(target); // ignore additional errors
-		return 1;
-	}
-	if (fclose(target) != 0) {
-		perror(fname);
-		free(buffer);
-		return 1;
-	}
-	buffer[size] = '\0';
-	lua_pushstring(L, buffer);
-	free(buffer);
-	return 0;
-}*/
 
 int main() {
 	lua_State *L = luaL_newstate();
@@ -63,11 +35,6 @@ int main() {
 		fprintf(stderr, "Failed to load: %s\n", lua_tostring(L, -1));
 		return 1;
 	}
-	/*status = load_bios_string(L, "bios.lua");
-	if (status) {
-		return 1;
-	}
-	status = lua_pcall(L, 1, 0, 0);*/
 	status = lua_pcall(L, 0, 0, 0);
 	if (status) {
 		fprintf(stderr, "Failed to run: %s\n", lua_tostring(L, -1));
