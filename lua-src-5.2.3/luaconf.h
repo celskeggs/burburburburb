@@ -34,15 +34,11 @@
 #endif
 
 #if defined(LUA_WIN)
-#define LUA_DL_DLL
 #define LUA_USE_AFORMAT		/* assume 'printf' handles 'aA' specifiers */
 #endif
 
 #if defined(LUA_USE_LINUX)
 #define LUA_USE_POSIX
-#if !defined(LUA_NO_USE_DLOPEN)
-#define LUA_USE_DLOPEN		/* needs an extra library: -ldl */
-#endif
 #define LUA_USE_READLINE	/* needs some extra libraries */
 #define LUA_USE_STRTODHEX	/* assume 'strtod' handles hex formats */
 #define LUA_USE_AFORMAT		/* assume 'printf' handles 'aA' specifiers */
@@ -51,7 +47,6 @@
 
 #if defined(LUA_USE_MACOSX)
 #define LUA_USE_POSIX
-#define LUA_USE_DLOPEN		/* does not need -ldl */
 #define LUA_USE_READLINE	/* needs an extra library: -lreadline */
 #define LUA_USE_STRTODHEX	/* assume 'strtod' handles hex formats */
 #define LUA_USE_AFORMAT		/* assume 'printf' handles 'aA' specifiers */
@@ -68,7 +63,6 @@
 #if defined(LUA_USE_POSIX)
 #define LUA_USE_MKSTEMP
 #define LUA_USE_ISATTY
-#define LUA_USE_POPEN
 #define LUA_USE_ULONGJMP
 #define LUA_USE_GMTIME_R
 #endif
