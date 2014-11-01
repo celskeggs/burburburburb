@@ -38,11 +38,11 @@
 #define LUA_USE_AFORMAT		/* assume 'printf' handles 'aA' specifiers */
 #endif
 
-
-
 #if defined(LUA_USE_LINUX)
 #define LUA_USE_POSIX
+#if !defined(LUA_NO_USE_DLOPEN)
 #define LUA_USE_DLOPEN		/* needs an extra library: -ldl */
+#endif
 #define LUA_USE_READLINE	/* needs some extra libraries */
 #define LUA_USE_STRTODHEX	/* assume 'strtod' handles hex formats */
 #define LUA_USE_AFORMAT		/* assume 'printf' handles 'aA' specifiers */

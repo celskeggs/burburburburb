@@ -1,13 +1,9 @@
 # Makefile for building Lua
-# See ../doc/readme.html for installation and customization instructions.
 
 # == CHANGE THE SETTINGS BELOW TO SUIT YOUR ENVIRONMENT =======================
 
-# Your platform. See PLATS for possible values.
-PLAT= none
-
 CC= gcc
-CFLAGS= -O2 -Wall -DLUA_COMPAT_ALL $(SYSCFLAGS) $(MYCFLAGS)
+CFLAGS= -O2 -Wall $(SYSCFLAGS) $(MYCFLAGS)
 LDFLAGS= $(SYSLDFLAGS) $(MYLDFLAGS)
 LIBS= -lm $(SYSLIBS) $(MYLIBS)
 
@@ -15,9 +11,9 @@ AR= ar rcu
 RANLIB= ranlib
 RM= rm -f
 
-SYSCFLAGS=
+SYSCFLAGS=-DLUA_USE_LINUX -DLUA_NO_USE_DLOPEN
 SYSLDFLAGS=
-SYSLIBS=
+SYSLIBS=-Wl,-E -lreadline
 
 MYCFLAGS=
 MYLDFLAGS=
@@ -26,12 +22,10 @@ MYOBJS=
 
 # == END OF USER SETTINGS -- NO NEED TO CHANGE ANYTHING BELOW THIS LINE =======
 
-PLATS= aix ansi bsd freebsd generic linux macosx mingw posix solaris
-
 LUA_A=	liblua.a
-CORE_O=	lapi.o lcode.o lctype.o ldebug.o ldo.o ldump.o lfunc.o lgc.o llex.o \
+CORE_O=	lapi.o lcode.o lctype.o ldebug.o ldo.o lfunc.o lgc.o llex.o \
 	lmem.o lobject.o lopcodes.o lparser.o lstate.o lstring.o ltable.o \
-	ltm.o lundump.o lvm.o lzio.o
+	ltm.o lvm.o lzio.o
 LIB_O=	lauxlib.o lbaselib.o lbitlib.o lcorolib.o ldblib.o liolib.o \
 	lmathlib.o loslib.o lstrlib.o ltablib.o loadlib.o linit.o
 BASE_O= $(CORE_O) $(LIB_O) $(MYOBJS)
@@ -39,15 +33,12 @@ BASE_O= $(CORE_O) $(LIB_O) $(MYOBJS)
 LUA_T=	lua
 LUA_O=	lua.o
 
-LUAC_T=	luac
-LUAC_O=	luac.o
-
-ALL_O= $(BASE_O) $(LUA_O) $(LUAC_O)
-ALL_T= $(LUA_A) $(LUA_T) $(LUAC_T)
+ALL_O= $(BASE_O) $(LUA_O)
+ALL_T= $(LUA_A) $(LUA_T)
 ALL_A= $(LUA_A)
 
 # Targets start here.
-default: $(PLAT)
+default: all
 
 all:	$(ALL_T)
 
@@ -62,9 +53,6 @@ $(LUA_A): $(BASE_O)
 $(LUA_T): $(LUA_O) $(LUA_A)
 	$(CC) -o $@ $(LDFLAGS) $(LUA_O) $(LUA_A) $(LIBS)
 
-$(LUAC_T): $(LUAC_O) $(LUA_A)
-	$(CC) -o $@ $(LDFLAGS) $(LUAC_O) $(LUA_A) $(LIBS)
-
 clean:
 	$(RM) $(ALL_T) $(ALL_O)
 
@@ -72,7 +60,6 @@ depend:
 	@$(CC) $(CFLAGS) -MM l*.c
 
 echo:
-	@echo "PLAT= $(PLAT)"
 	@echo "CC= $(CC)"
 	@echo "CFLAGS= $(CFLAGS)"
 	@echo "LDFLAGS= $(SYSLDFLAGS)"
@@ -81,53 +68,13 @@ echo:
 	@echo "RANLIB= $(RANLIB)"
 	@echo "RM= $(RM)"
 
-# Convenience targets for popular platforms
-ALL= all
-
-none:
-	@echo "Please do 'make PLATFORM' where PLATFORM is one of these:"
-	@echo "   $(PLATS)"
-
-aix:
-	$(MAKE) $(ALL) CC="xlc" CFLAGS="-O2 -DLUA_USE_POSIX -DLUA_USE_DLOPEN" SYSLIBS="-ldl" SYSLDFLAGS="-brtl -bexpall"
-
-ansi:
-	$(MAKE) $(ALL) SYSCFLAGS="-DLUA_ANSI"
-
-bsd:
-	$(MAKE) $(ALL) SYSCFLAGS="-DLUA_USE_POSIX -DLUA_USE_DLOPEN" SYSLIBS="-Wl,-E"
-
-freebsd:
-	$(MAKE) $(ALL) SYSCFLAGS="-DLUA_USE_LINUX" SYSLIBS="-Wl,-E -lreadline"
-
-generic: $(ALL)
-
-linux:
-	$(MAKE) $(ALL) SYSCFLAGS="-DLUA_USE_LINUX" SYSLIBS="-Wl,-E -ldl -lreadline"
-
-macosx:
-	$(MAKE) $(ALL) SYSCFLAGS="-DLUA_USE_MACOSX" SYSLIBS="-lreadline" CC=cc
-
-mingw:
-	$(MAKE) "LUA_A=lua52.dll" "LUA_T=lua.exe" \
-	"AR=$(CC) -shared -o" "RANLIB=strip --strip-unneeded" \
-	"SYSCFLAGS=-DLUA_BUILD_AS_DLL" "SYSLIBS=" "SYSLDFLAGS=-s" lua.exe
-	$(MAKE) "LUAC_T=luac.exe" luac.exe
-
-posix:
-	$(MAKE) $(ALL) SYSCFLAGS="-DLUA_USE_POSIX"
-
-solaris:
-	$(MAKE) $(ALL) SYSCFLAGS="-DLUA_USE_POSIX -DLUA_USE_DLOPEN" SYSLIBS="-ldl"
-
 # list targets that do not create files (but not all makes understand .PHONY)
-.PHONY: all $(PLATS) default o a clean depend echo none
+.PHONY: all default o a clean depend echo
 
 # DO NOT DELETE
 
 lapi.o: lapi.c lua.h luaconf.h lapi.h llimits.h lstate.h lobject.h ltm.h \
- lzio.h lmem.h ldebug.h ldo.h lfunc.h lgc.h lstring.h ltable.h lundump.h \
- lvm.h
+ lzio.h lmem.h ldebug.h ldo.h lfunc.h lgc.h lstring.h ltable.h lvm.h
 lauxlib.o: lauxlib.c lua.h luaconf.h lauxlib.h
 lbaselib.o: lbaselib.c lua.h luaconf.h lauxlib.h lualib.h
 lbitlib.o: lbitlib.c lua.h luaconf.h lauxlib.h lualib.h
@@ -142,9 +89,7 @@ ldebug.o: ldebug.c lua.h luaconf.h lapi.h llimits.h lstate.h lobject.h \
  lfunc.h lstring.h lgc.h ltable.h lvm.h
 ldo.o: ldo.c lua.h luaconf.h lapi.h llimits.h lstate.h lobject.h ltm.h \
  lzio.h lmem.h ldebug.h ldo.h lfunc.h lgc.h lopcodes.h lparser.h \
- lstring.h ltable.h lundump.h lvm.h
-ldump.o: ldump.c lua.h luaconf.h lobject.h llimits.h lstate.h ltm.h \
- lzio.h lmem.h lundump.h
+ lstring.h ltable.h lvm.h
 lfunc.o: lfunc.c lua.h luaconf.h lfunc.h lobject.h llimits.h lgc.h \
  lstate.h ltm.h lzio.h lmem.h
 lgc.o: lgc.c lua.h luaconf.h ldebug.h lstate.h lobject.h llimits.h ltm.h \
@@ -176,10 +121,6 @@ ltablib.o: ltablib.c lua.h luaconf.h lauxlib.h lualib.h
 ltm.o: ltm.c lua.h luaconf.h lobject.h llimits.h lstate.h ltm.h lzio.h \
  lmem.h lstring.h lgc.h ltable.h
 lua.o: lua.c lua.h luaconf.h lauxlib.h lualib.h
-luac.o: luac.c lua.h luaconf.h lauxlib.h lobject.h llimits.h lstate.h \
- ltm.h lzio.h lmem.h lundump.h ldebug.h lopcodes.h
-lundump.o: lundump.c lua.h luaconf.h ldebug.h lstate.h lobject.h \
- llimits.h ltm.h lzio.h lmem.h ldo.h lfunc.h lstring.h lgc.h lundump.h
 lvm.o: lvm.c lua.h luaconf.h ldebug.h lstate.h lobject.h llimits.h ltm.h \
  lzio.h lmem.h ldo.h lfunc.h lgc.h lopcodes.h lstring.h ltable.h lvm.h
 lzio.o: lzio.c lua.h luaconf.h llimits.h lmem.h lstate.h lobject.h ltm.h \
