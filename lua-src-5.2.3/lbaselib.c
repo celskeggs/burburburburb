@@ -20,29 +20,6 @@
 #include "lualib.h"
 
 
-static int luaB_print (lua_State *L) {
-  int n = lua_gettop(L);  /* number of arguments */
-  int i;
-  lua_getglobal(L, "tostring");
-  for (i=1; i<=n; i++) {
-    const char *s;
-    size_t l;
-    lua_pushvalue(L, -1);  /* function to be called */
-    lua_pushvalue(L, i);   /* value to print */
-    lua_call(L, 1, 1);
-    s = lua_tolstring(L, -1, &l);  /* get result */
-    if (s == NULL)
-      return luaL_error(L,
-         LUA_QL("tostring") " must return a string to " LUA_QL("print"));
-    if (i>1) luai_writestring("\t", 1);
-    luai_writestring(s, l);
-    lua_pop(L, 1);  /* pop result */
-  }
-  luai_writeline();
-  return 0;
-}
-
-
 #define SPACECHARS	" \f\n\r\t\v"
 
 static int luaB_tonumber (lua_State *L) {
@@ -370,7 +347,6 @@ static const luaL_Reg base_funcs[] = {
   {"next", luaB_next},
   {"pairs", luaB_pairs},
   {"pcall", luaB_pcall},
-  {"print", luaB_print},
   {"rawequal", luaB_rawequal},
   {"rawlen", luaB_rawlen},
   {"rawget", luaB_rawget},
