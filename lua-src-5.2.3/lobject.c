@@ -5,7 +5,6 @@
 */
 
 #include <stdarg.h>
-#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -202,12 +201,6 @@ const char *luaO_pushvfstring (lua_State *L, const char *fmt, va_list argp) {
       }
       case 'f': {
         setnvalue(L->top++, cast_num(va_arg(argp, l_uacNumber)));
-        break;
-      }
-      case 'p': {
-        char buff[4*sizeof(void *) + 8]; /* should be enough space for a `%p' */
-        int l = sprintf(buff, "%p", va_arg(argp, void *));
-        pushstr(L, buff, l);
         break;
       }
       case '%': {
