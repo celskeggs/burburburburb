@@ -5,7 +5,6 @@
 */
 
 
-#include <locale.h>
 #include <string.h>
 
 #define llex_c
@@ -158,7 +157,6 @@ static void inclinenumber (LexState *ls) {
 
 void luaX_setinput (lua_State *L, LexState *ls, ZIO *z, TString *source,
                     int firstchar) {
-  ls->decpoint = '.';
   ls->L = L;
   ls->current = firstchar;
   ls->lookahead.token = TK_EOS;  /* no look-ahead token */
@@ -190,39 +188,7 @@ static int check_next (LexState *ls, const char *set) {
 }
 
 
-/*
-** change all characters 'from' in buffer to 'to'
-*/
-static void buffreplace (LexState *ls, char from, char to) {
-  size_t n = luaZ_bufflen(ls->buff);
-  char *p = luaZ_buffer(ls->buff);
-  while (n--)
-    if (p[n] == from) p[n] = to;
-}
-
-
-#if !defined(getlocaledecpoint)
-#define getlocaledecpoint()	(localeconv()->decimal_point[0])
-#endif
-
-
 #define buff2d(b,e)	luaO_str2d(luaZ_buffer(b), luaZ_bufflen(b) - 1, e)
-
-/*
-** in case of format error, try to change decimal point separator to
-** the one defined in the current locale and check again
-*/
-static void trydecpoint (LexState *ls, SemInfo *seminfo) {
-  char old = ls->decpoint;
-  ls->decpoint = getlocaledecpoint();
-  buffreplace(ls, old, ls->decpoint);  /* try new decimal separator */
-  if (!buff2d(ls->buff, &seminfo->r)) {
-    /* format error with correct decimal point: no more options */
-    buffreplace(ls, ls->decpoint, '.');  /* undo change (for error message) */
-    lexerror(ls, "malformed number", TK_NUMBER);
-  }
-}
-
 
 /* LUA_NUMBER */
 /*
@@ -244,9 +210,9 @@ static void read_numeral (LexState *ls, SemInfo *seminfo) {
     else  break;
   }
   save(ls, '\0');
-  buffreplace(ls, '.', ls->decpoint);  /* follow locale for decimal point */
   if (!buff2d(ls->buff, &seminfo->r))  /* format error? */
-    trydecpoint(ls, seminfo); /* try to update decimal point separator */
+    /* format error with correct decimal point: no more options */
+    lexerror(ls, "malformed number", TK_NUMBER);
 }
 
 

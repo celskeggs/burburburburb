@@ -73,12 +73,7 @@ typedef LUAI_UACNUMBER l_uacNumber;
 */
 #if !defined(luai_apicheck)
 
-#if defined(LUA_USE_APICHECK)
-#include <assert.h>
-#define luai_apicheck(L,e)	assert(e)
-#else
 #define luai_apicheck(L,e)	lua_assert(e)
-#endif
 
 #endif
 
