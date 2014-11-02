@@ -157,35 +157,6 @@ static int luaB_rawset (lua_State *L) {
 }
 
 
-static int luaB_collectgarbage (lua_State *L) {
-  static const char *const opts[] = {"stop", "restart", "collect",
-    "count", "step", "setpause", "setstepmul",
-    "setmajorinc", "isrunning", "generational", "incremental", NULL};
-  static const int optsnum[] = {LUA_GCSTOP, LUA_GCRESTART, LUA_GCCOLLECT,
-    LUA_GCCOUNT, LUA_GCSTEP, LUA_GCSETPAUSE, LUA_GCSETSTEPMUL,
-    LUA_GCSETMAJORINC, LUA_GCISRUNNING, LUA_GCGEN, LUA_GCINC};
-  int o = optsnum[luaL_checkoption(L, 1, "collect", opts)];
-  int ex = luaL_optint(L, 2, 0);
-  int res = lua_gc(L, o, ex);
-  switch (o) {
-    case LUA_GCCOUNT: {
-      int b = lua_gc(L, LUA_GCCOUNTB, 0);
-      lua_pushnumber(L, res + ((lua_Number)b/1024));
-      lua_pushinteger(L, b);
-      return 2;
-    }
-    case LUA_GCSTEP: case LUA_GCISRUNNING: {
-      lua_pushboolean(L, res);
-      return 1;
-    }
-    default: {
-      lua_pushinteger(L, res);
-      return 1;
-    }
-  }
-}
-
-
 static int luaB_type (lua_State *L) {
   luaL_checkany(L, 1);
   lua_pushstring(L, luaL_typename(L, 1));
@@ -392,7 +363,6 @@ static int luaB_tostring (lua_State *L) {
 
 static const luaL_Reg base_funcs[] = {
   {"assert", luaB_assert},
-  {"collectgarbage", luaB_collectgarbage},
   {"error", luaB_error},
   {"getmetatable", luaB_getmetatable},
   {"ipairs", luaB_ipairs},
