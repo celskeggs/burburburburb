@@ -259,15 +259,6 @@ static int load_aux (lua_State *L, int status, int envidx) {
 }
 
 
-static int luaB_loadfile (lua_State *L) {
-  const char *fname = luaL_optstring(L, 1, NULL);
-  const char *mode = luaL_optstring(L, 2, NULL);
-  int env = (!lua_isnone(L, 3) ? 3 : 0);  /* 'env' index or 0 if no 'env' */
-  int status = luaL_loadfilex(L, fname, mode);
-  return load_aux(L, status, env);
-}
-
-
 /*
 ** {======================================================
 ** Generic Read function
@@ -405,7 +396,6 @@ static const luaL_Reg base_funcs[] = {
   {"error", luaB_error},
   {"getmetatable", luaB_getmetatable},
   {"ipairs", luaB_ipairs},
-  {"loadfile", luaB_loadfile},
   {"load", luaB_load},
   {"next", luaB_next},
   {"pairs", luaB_pairs},
