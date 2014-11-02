@@ -7,7 +7,7 @@
 
 #include <ctype.h>
 #include <stddef.h>
-#include <stdio.h>
+#include <stdio.h> // only for sprintf
 #include <stdlib.h>
 #include <string.h>
 
