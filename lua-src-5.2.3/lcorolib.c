@@ -5,9 +5,6 @@
 */
 
 
-#include <stdlib.h>
-
-
 #define lcorolib_c
 #define LUA_LIB
 

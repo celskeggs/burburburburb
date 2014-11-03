@@ -6,7 +6,7 @@
 
 
 #include <setjmp.h>
-#include <stdlib.h>
+#include <stdlib.h> // for abort - make sure to pcall the outermost lua block
 #include <string.h>
 
 #define ldo_c

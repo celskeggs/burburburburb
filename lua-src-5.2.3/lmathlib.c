@@ -5,7 +5,7 @@
 */
 
 
-#include <stdlib.h>
+#include <stdlib.h> // for random numbers
 #include <math.h>
 
 #define lmathlib_c

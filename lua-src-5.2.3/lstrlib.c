@@ -8,7 +8,6 @@
 #include <ctype.h>
 #include <stddef.h>
 #include <stdio.h> // only for sprintf
-#include <stdlib.h>
 #include <string.h>
 
 #define lstrlib_c

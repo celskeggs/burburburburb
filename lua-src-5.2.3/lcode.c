@@ -5,7 +5,7 @@
 */
 
 
-#include <stdlib.h>
+#include <stdlib.h> // for abs
 
 #define lcode_c
 #define LUA_CORE

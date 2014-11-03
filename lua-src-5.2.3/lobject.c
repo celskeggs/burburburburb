@@ -5,7 +5,7 @@
 */
 
 #include <stdarg.h>
-#include <stdlib.h>
+#include <stdlib.h> // for strtod
 #include <string.h>
 
 #define lobject_c

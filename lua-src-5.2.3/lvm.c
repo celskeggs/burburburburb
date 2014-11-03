@@ -6,7 +6,6 @@
 
 
 #include <stdio.h> // only for sprintf
-#include <stdlib.h>
 #include <string.h>
 
 #define lvm_c
