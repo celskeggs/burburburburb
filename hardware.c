@@ -1,12 +1,14 @@
 #include "hardware.h"
-#include "sync.h"
-#include <stdbool.h>
+#include <stdlib.h>
+#include <string.h>
 
 #define NEW(x) ((x*) malloc(sizeof(x)))
 
 struct hw_ent *hw_new() {
 	struct hw_ent *out = NEW(struct hw_ent);
-	out->core = NULL;
+	if (out == NULL) {
+		return NULL;
+	}
 	out->sysbus_head = NULL;
 	return out;
 }
@@ -18,6 +20,9 @@ static void hw_add_sysbus(struct hw_ent *out, struct hw_sysbus *add) {
 
 static struct hw_sysbus *hw_sysbus_new(uint16_t typeid) {
 	struct hw_sysbus *out = NEW(struct hw_sysbus);
+	if (out == NULL) {
+		return NULL;
+	}
 	out->busid = 0xFF;
 	out->typeid = typeid;
 	out->entry_data = NULL;
@@ -27,6 +32,9 @@ static struct hw_sysbus *hw_sysbus_new(uint16_t typeid) {
 
 struct hw_serial_buffer *hw_serial_new() {
 	struct hw_serial_buffer *out = NEW(struct hw_serial_buffer);
+	if (out == NULL) {
+		return NULL;
+	}
 	memset(out->data, '\0', sizeof(out->data));
 	out->read_ptr = out->write_ptr = 0;
 	MUTEX_INIT(out->lock);

@@ -1,8 +1,9 @@
 #ifndef HARDWARE_H
 #define HARDWARE_H
 
-#include <lua.h>
 #include <stdint.h>
+#include <stdbool.h>
+#include "sync.h"
 
 #define HW_SYSBUS_NULL 0x0000
 #define HW_SYSBUS_SERIAL_IN 0x9C92
@@ -25,7 +26,6 @@ struct hw_serial_buffer {
 };
 
 struct hw_ent {
-	lua_State *core;
 	struct hw_sysbus *sysbus_head;
 };
 
