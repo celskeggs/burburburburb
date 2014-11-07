@@ -10,12 +10,20 @@
 
 static int sysbusctl(lua_State *L) {
 	struct cpu_ent *cpu = (struct cpu_ent *) lua_touserdata(L, lua_upvalueindex(1));
-	int control = luaL_checkint(L, 1);
+	uint16_t control = luaL_checkint(L, 1);
 	if (cpu->hardware == NULL) {
 		lua_pushinteger(L, 0xFFFF);
 		return 1;
 	}
 	uint16_t intout = 0xFFFF;
+	if (control >= 0x100 && control <= 0x1FF) { // exchange byte with busid
+		struct hw_sysbus *bus = hw_bus_lookup(cpu->hardware, control - 0x100);
+		if (bus != NULL) {
+			intout = hw_exchange_bus(bus, luaL_checkint(L, 3));
+		}
+		lua_pushinteger(L, intout);
+		return 1;
+	}
 	switch (control) {
 	case 0: // system check
 		intout = 0xCA72;
@@ -26,11 +34,11 @@ static int sysbusctl(lua_State *L) {
 		break;
 	case 2: // continue enumeration
 		if (cpu->iter_head != NULL) {
-			cpu->iter_head = cpu->iter_head;
+			cpu->iter_head = cpu->iter_head->next;
 			intout = cpu->iter_head != NULL;
 		}
 		break;
-	case 3: // end enumeration
+	case 3: // end enumeration - optional
 		cpu->iter_head = NULL;
 		intout = 0x0000;
 		break;
@@ -51,7 +59,7 @@ static int sysbusctl(lua_State *L) {
 		}
 		break;
 	case 127: // print
-		printf("[DEBUG] %s [END]\n", luaL_checkstring(L, 2));
+		printf("[DEBUG-IO] %s\n", luaL_checkstring(L, 2));
 		intout = 0x0000;
 		break;
 	}
@@ -108,7 +116,7 @@ static int loadfile(lua_State *L, const char *filename) {
 
 struct cpu_ent *cpu_new() {
 	struct cpu_ent *out = NEW(struct cpu_ent);
-	out->hardware = hw_new();
+	out->hardware = NULL;
 	out->iter_head = NULL;
 	out->thread_exists = false;
 	out->L = lua_newstate(allocator, NULL);
@@ -136,8 +144,10 @@ struct cpu_ent *cpu_new() {
 	if (status) {
 		fprintf(stderr, "PANIC: Failed to load bios.lua: %s\n", lua_tostring(out->L, -1));
 		lua_close(out->L);
+		free(out);
 		return NULL;
 	}
+	out->hardware = hw_new();
 	return out;
 }
 

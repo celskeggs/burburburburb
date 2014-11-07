@@ -41,4 +41,7 @@ void hw_add_sysbus_serial_out(struct hw_ent *out, struct hw_serial_buffer *buffe
 void hw_add_sysbus_null(struct hw_ent *out);
 void hw_add_sysbus_zero(struct hw_ent *out);
 
+struct hw_sysbus *hw_bus_lookup(struct hw_ent *out, uint8_t busid);
+uint16_t hw_exchange_bus(struct hw_sysbus *ent, uint8_t byte);
+
 #endif

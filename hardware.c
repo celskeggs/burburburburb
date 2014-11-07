@@ -88,3 +88,29 @@ void hw_add_sysbus_zero(struct hw_ent *out) {
 	hw_add_sysbus(out, hw_sysbus_new(HW_SYSBUS_ZERO));
 }
 
+struct hw_sysbus *hw_bus_lookup(struct hw_ent *out, uint8_t busid) {
+	struct hw_sysbus *active = out->sysbus_head;
+	while (active != NULL && active->busid != busid) {
+		active = active->next;
+	}
+	return active;
+}
+
+uint16_t hw_exchange_bus(struct hw_sysbus *ent, uint8_t byte) {
+	uint8_t toread;
+	switch (ent->typeid) {
+	case HW_SYSBUS_SERIAL_IN:
+		if (hw_serial_remove((struct hw_serial_buffer *) ent->entry_data, &toread)) {
+			return toread;
+		} else {
+			return 0xFFFF;
+		}
+	case HW_SYSBUS_SERIAL_OUT:
+		return hw_serial_insert((struct hw_serial_buffer *) ent->entry_data, byte) ? 0x0001 : 0x0000;
+	case HW_SYSBUS_ZERO:
+		return 0x0000;
+	default:
+		return 0xFFFF;
+	}
+}
+
