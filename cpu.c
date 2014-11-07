@@ -8,6 +8,16 @@
 
 #define NEW(x) ((x*) malloc(sizeof(x)))
 
+static int procctl(lua_State *L) {
+	struct cpu_ent *cpu = (struct cpu_ent *) lua_touserdata(L, lua_upvalueindex(1));
+	uint16_t control = luaL_checkint(L, 1);
+	switch (control) {
+	case 0: hw_notify_notify(cpu->interrupt); break;
+	case 1: hw_notify_wait(cpu->interrupt); break;
+	}
+	return 0;
+}
+
 static int sysbusctl(lua_State *L) {
 	struct cpu_ent *cpu = (struct cpu_ent *) lua_touserdata(L, lua_upvalueindex(1));
 	uint16_t control = luaL_checkint(L, 1);
@@ -19,11 +29,12 @@ static int sysbusctl(lua_State *L) {
 	if (control >= 0x100 && control <= 0x1FF) { // exchange byte with busid
 		struct hw_sysbus *bus = hw_bus_lookup(cpu->hardware, control - 0x100);
 		if (bus != NULL) {
-			intout = hw_exchange_bus(bus, luaL_checkint(L, 3));
+			intout = hw_exchange_bus(bus, luaL_checkint(L, 2));
 		}
 		lua_pushinteger(L, intout);
 		return 1;
 	}
+	struct hw_sysbus *bus;
 	switch (control) {
 	case 0: // system check
 		intout = 0xCA72;
@@ -56,6 +67,18 @@ static int sysbusctl(lua_State *L) {
 		if (cpu->iter_head != NULL) {
 			cpu->iter_head->busid = luaL_checkint(L, 2);
 			intout = cpu->iter_head->busid;
+		}
+		break;
+	case 7: // register interrupt with busid
+		bus = hw_bus_lookup(cpu->hardware, luaL_checkint(L, 2));
+		if (bus != NULL) {
+			intout = hw_subscribe_bus(bus, cpu->interrupt);
+		}
+		break;
+	case 8: // unregister interrupt with busid
+		bus = hw_bus_lookup(cpu->hardware, luaL_checkint(L, 2));
+		if (bus != NULL) {
+			intout = hw_unsubscribe_bus(bus, cpu->interrupt);
 		}
 		break;
 	case 127: // print
@@ -116,12 +139,23 @@ static int loadfile(lua_State *L, const char *filename) {
 
 struct cpu_ent *cpu_new() {
 	struct cpu_ent *out = NEW(struct cpu_ent);
+	if (out == NULL) {
+		fputs("PANIC: Not enough memory.\n", stderr);
+		return NULL;
+	}
 	out->hardware = NULL;
 	out->iter_head = NULL;
 	out->thread_exists = false;
+	out->interrupt = hw_notify_new();
+	if (out->interrupt == NULL) {
+		free(out);
+		return NULL;
+	}
 	out->L = lua_newstate(allocator, NULL);
 	if (out->L == NULL) {
 		fputs("PANIC: Not enough memory.\n", stderr);
+		hw_notify_destroy(out->interrupt);
+		free(out);
 		return NULL;
 	}
 	lua_atpanic(out->L, &panic);
@@ -140,9 +174,13 @@ struct cpu_ent *cpu_new() {
 	lua_pushlightuserdata(out->L, out);
 	lua_pushcclosure(out->L, sysbusctl, 1);
 	lua_setglobal(out->L, "sysbusctl");
+	lua_pushlightuserdata(out->L, out);
+	lua_pushcclosure(out->L, procctl, 1);
+	lua_setglobal(out->L, "procctl");
 	int status = loadfile(out->L, "bios.lua");
 	if (status) {
 		fprintf(stderr, "PANIC: Failed to load bios.lua: %s\n", lua_tostring(out->L, -1));
+		hw_notify_destroy(out->interrupt);
 		lua_close(out->L);
 		free(out);
 		return NULL;

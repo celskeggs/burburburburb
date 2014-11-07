@@ -6,7 +6,7 @@ end
 debug("starting...")
 function sysbusctl(x, ...)
 	out = old_sysbusctl(x, ...)
-	debug("sysbus cmd " .. x .. " -> " .. out)
+	--debug("sysbus cmd " .. x .. " -> " .. out)
 	return out
 end
 function sysbus_check()
@@ -43,6 +43,40 @@ function sysbus_enumerate()
 	end
 	debug("total sysbus devices: " .. enumid)
 end
+function sysbus_configure()
+	debug("configuring sysbus...")
+	if sysbusctl_boolean(1) then
+		repeat
+			local busid = sysbusctl(5)
+			if busid ~= 255 then
+				sysbusctl(6, 255)
+			end
+			assert(sysbusctl(5) == 255)
+		until not sysbusctl_boolean(2)
+	end
+	local enumid = 0
+	if sysbusctl_boolean(1) then
+		repeat
+			local busid = sysbusctl(5)
+			sysbusctl(6, enumid)
+			assert(sysbusctl(5) == enumid)
+			enumid = enumid + 1
+		until not sysbusctl_boolean(2)
+	end
+	debug("total sysbus devices: " .. enumid)
+end
 sysbus_enumerate()
+sysbus_configure()
+sysbus_enumerate()
+function write(x)
+	for k,v in ipairs({string.byte(x,1,#x)}) do
+		sysbusctl(257, v)
+	end
+end
+write("Hello, World!\n")
+function getchar()
+	debug("got " .. sysbusctl(258, 0))
+end
+getchar()
 debug("halting system")
 

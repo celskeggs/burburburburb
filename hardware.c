@@ -1,8 +1,10 @@
 #include "hardware.h"
+#include <errno.h>
 #include <stdlib.h>
 #include <string.h>
 
 #define NEW(x) ((x*) malloc(sizeof(x)))
+#define HANDLE(f,m,c) { int status = f; if (status) { errno = status; perror(m); c; } }
 
 struct hw_ent *hw_new() {
 	struct hw_ent *out = NEW(struct hw_ent);
@@ -30,6 +32,47 @@ static struct hw_sysbus *hw_sysbus_new(uint16_t typeid) {
 	return out;
 }
 
+struct hw_notify *hw_notify_new() {
+	struct hw_notify *out = NEW(struct hw_notify);
+	if (out == NULL) {
+		return NULL;
+	}
+	out->is_active = false;
+	HANDLE(pthread_mutex_init(&out->lock, NULL), "allocate mutex", {
+		free(out);
+		return NULL;
+	})
+	HANDLE(pthread_cond_init(&out->cond, NULL), "allocate cond", {
+		HANDLE(pthread_mutex_destroy(&out->lock), "deallocate mutex", {});
+		free(out);
+		return NULL;
+	})
+	return out;
+}
+
+void hw_notify_destroy(struct hw_notify *ent) {
+	HANDLE(pthread_mutex_destroy(&ent->lock), "deallocate mutex", {})
+	HANDLE(pthread_cond_destroy(&ent->cond), "deallocate cond", {})
+	free(ent);
+}
+
+void hw_notify_notify(struct hw_notify *ent) {
+	if (ent == NULL) { return; }
+	HANDLE(pthread_mutex_lock(&ent->lock), "lock mutex", { return; })
+	ent->is_active = true;
+	HANDLE(pthread_mutex_unlock(&ent->lock), "unlock mutex", {})
+	HANDLE(pthread_cond_broadcast(&ent->cond), "broadcast cond", {})
+}
+
+void hw_notify_wait(struct hw_notify *ent) {
+	HANDLE(pthread_mutex_lock(&ent->lock), "lock mutex", { return; })
+	while (!ent->is_active) {
+		HANDLE(pthread_cond_wait(&ent->cond, &ent->lock), "wait cond", { return; });
+	}
+	ent->is_active = false;
+	HANDLE(pthread_mutex_unlock(&ent->lock), "unlock mutex", {})
+}
+
 struct hw_serial_buffer *hw_serial_new() {
 	struct hw_serial_buffer *out = NEW(struct hw_serial_buffer);
 	if (out == NULL) {
@@ -37,34 +80,39 @@ struct hw_serial_buffer *hw_serial_new() {
 	}
 	memset(out->data, '\0', sizeof(out->data));
 	out->read_ptr = out->write_ptr = 0;
-	MUTEX_INIT(out->lock);
+	out->notify_reader = out->notify_writer = NULL;
+	HANDLE(pthread_mutex_init(&out->lock, NULL), "allocate mutex", {
+		free(out);
+		return NULL;
+	})
 	return out;
 }
 
 void hw_serial_delete(struct hw_serial_buffer *buffer) {
-	MUTEX_DESTROY(buffer->lock);
+	HANDLE(pthread_mutex_destroy(&buffer->lock), "deallocate mutex", {})
 	free(buffer);
 }
 
 bool hw_serial_insert(struct hw_serial_buffer *ptr, uint8_t data) {
-	bool could_write;
-	MUTEX_LOCK(ptr->lock);
-	could_write = (ptr->read_ptr != (uint8_t) (ptr->write_ptr + 1));
+	HANDLE(pthread_mutex_lock(&ptr->lock), "lock mutex", { return false; })
+	bool could_write = (ptr->read_ptr != (uint8_t) (ptr->write_ptr + 1));
 	if (could_write) {
 		ptr->data[ptr->write_ptr++] = data;
 	}
-	MUTEX_UNLOCK(ptr->lock);
+	HANDLE(pthread_mutex_unlock(&ptr->lock), "unlock mutex", {})
+	hw_notify_notify(ptr->notify_reader);
 	return could_write;
 }
 
 bool hw_serial_remove(struct hw_serial_buffer *ptr, uint8_t *data) {
 	bool could_read;
-	MUTEX_LOCK(ptr->lock);
+	HANDLE(pthread_mutex_lock(&ptr->lock), "lock mutex", { return false; })
 	could_read = (ptr->read_ptr != ptr->write_ptr);
 	if (could_read) {
 		*data = ptr->data[ptr->read_ptr++];
 	}
-	MUTEX_UNLOCK(ptr->lock);
+	HANDLE(pthread_mutex_unlock(&ptr->lock), "unlock mutex", {})
+	hw_notify_notify(ptr->notify_writer);
 	return could_read;
 }
 
@@ -111,6 +159,50 @@ uint16_t hw_exchange_bus(struct hw_sysbus *ent, uint8_t byte) {
 		return 0x0000;
 	default:
 		return 0xFFFF;
+	}
+}
+
+bool hw_subscribe_bus(struct hw_sysbus *bus, struct hw_notify *ent) {
+	struct hw_serial_buffer *buf;
+	switch (bus->typeid) {
+	case HW_SYSBUS_SERIAL_IN:
+		buf = (struct hw_serial_buffer *) bus->entry_data;
+		if (buf->notify_reader == NULL) {
+			buf->notify_reader = ent;
+			return true;
+		}
+		return false;
+	case HW_SYSBUS_SERIAL_OUT:
+		buf = (struct hw_serial_buffer *) bus->entry_data;
+		if (buf->notify_writer == NULL) {
+			buf->notify_writer = ent;
+			return true;
+		}
+		return false;
+	default:
+		return false;
+	}
+}
+
+bool hw_unsubscribe_bus(struct hw_sysbus *bus, struct hw_notify *ent) {
+	struct hw_serial_buffer *buf;
+	switch (bus->typeid) {
+	case HW_SYSBUS_SERIAL_IN:
+		buf = (struct hw_serial_buffer *) bus->entry_data;
+		if (buf->notify_reader == ent) {
+			buf->notify_reader = NULL;
+			return true;
+		}
+		return false;
+	case HW_SYSBUS_SERIAL_OUT:
+		buf = (struct hw_serial_buffer *) bus->entry_data;
+		if (buf->notify_writer == ent) {
+			buf->notify_writer = NULL;
+			return true;
+		}
+		return false;
+	default:
+		return false;
 	}
 }
 

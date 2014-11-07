@@ -3,7 +3,7 @@
 
 #include <stdint.h>
 #include <stdbool.h>
-#include "sync.h"
+#include <pthread.h>
 
 #define HW_SYSBUS_NULL 0x0000
 #define HW_SYSBUS_SERIAL_IN 0x9C92
@@ -18,11 +18,19 @@ struct hw_sysbus {
 	struct hw_sysbus *next;
 };
 
+struct hw_notify {
+	bool is_active;
+	pthread_mutex_t lock;
+	pthread_cond_t cond;
+};
+
 struct hw_serial_buffer {
 	uint8_t data[256]; // serial input buffer
 	uint8_t read_ptr;
 	uint8_t write_ptr;
-	MUTEX_DEF(lock);
+	pthread_mutex_t lock;
+	struct hw_notify *notify_reader;
+	struct hw_notify *notify_writer;
 };
 
 struct hw_ent {
@@ -30,6 +38,11 @@ struct hw_ent {
 };
 
 struct hw_ent *hw_new();
+
+struct hw_notify *hw_notify_new();
+void hw_notify_notify(struct hw_notify *ent);
+void hw_notify_wait(struct hw_notify *ent);
+void hw_notify_destroy(struct hw_notify *ent);
 
 struct hw_serial_buffer *hw_serial_new();
 void hw_serial_delete(struct hw_serial_buffer *buffer);
@@ -42,6 +55,8 @@ void hw_add_sysbus_null(struct hw_ent *out);
 void hw_add_sysbus_zero(struct hw_ent *out);
 
 struct hw_sysbus *hw_bus_lookup(struct hw_ent *out, uint8_t busid);
-uint16_t hw_exchange_bus(struct hw_sysbus *ent, uint8_t byte);
+uint16_t hw_exchange_bus(struct hw_sysbus *bus, uint8_t byte);
+bool hw_subscribe_bus(struct hw_sysbus *bus, struct hw_notify *ent);
+bool hw_unsubscribe_bus(struct hw_sysbus *bus, struct hw_notify *ent);
 
 #endif

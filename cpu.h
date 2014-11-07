@@ -9,6 +9,7 @@
 struct cpu_ent {
 	struct hw_ent *hardware;
 	struct hw_sysbus *iter_head;
+	struct hw_notify *interrupt;
 	bool thread_exists;
 	bool thread_complete;
 	pthread_t thread_state;
